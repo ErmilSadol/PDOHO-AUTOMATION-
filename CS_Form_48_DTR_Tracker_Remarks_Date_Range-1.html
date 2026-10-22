@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDOHO Automated Daily Time Recording System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Tinos:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Tinos', 'Georgia', 'serif'],
+                    },
+                    colors: {
+                        csnavy: '#1e3a8a',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* CSS Page Size rules dynamically updated for Print */
+        @media print {
+            body * {
+                visibility: hidden !important;
+            }
+            #printable-area, #printable-area * {
+                visibility: visible !important;
+            }
+            #printable-area {
+                position: fixed !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: auto !important;
+                background: white !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+                border: none !important;
+            }
+            .no-print, header, nav, button, .modal-header {
+                display: none !important;
+            }
+        }
+
+        /* Dynamic Paper Styles injected at runtime */
+        @page {
+            size: auto;
+            margin: 5mm;
+        }
+
+        /* CS Form 48 Exact Styling */
+        .dtr-table th, .dtr-table td {
+            border: 1px solid #000;
+            text-align: center;
+            padding: 1px 2px;
+            font-size: 9.5px;
+            height: 17px;
+            line-height: 1;
+        }
+        .dtr-table th {
+            font-weight: bold;
+            background-color: #f8fafc;
+            text-transform: uppercase;
+        }
+        .cs-form-box {
+            font-family: 'Tinos', 'Times New Roman', serif;
+            color: #000;
+            line-height: 1.15;
+            box-sizing: border-box;
+            background: #fff;
+            padding: 8px;
+            border: 1px solid #000;
+        }
+        
+        .paper-a4 {
+            width: 210mm;
+            min-height: 297mm;
+        }
+        .paper-folio {
+            width: 215.9mm;
+            min-height: 330.2mm; /* 8.5 x 13 inches */
+        }
+        .paper-letter {
+            width: 215.9mm;
+            min-height: 279.4mm;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen font-sans text-slate-800 antialiased">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-slate-900 text-white shadow-md no-print sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-blue-600 p-2 rounded-lg text-white">
+                        <i class="fa-solid fa-file-invoice text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-none">PDOHO Automated Daily Time Recording System</h1>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <div class="flex space-x-1 sm:space-x-2">
+                    <button onclick="switchTab('logger')" id="tab-logger" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-1 bg-blue-600 text-white">
+                        <i class="fa-solid fa-clock"></i>
+                        <span class="hidden sm:inline">Time Logger</span>
+                    </button>
+                    <button onclick="switchTab('preview')" id="tab-preview" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-1 text-slate-300 hover:text-white hover:bg-slate-800">
+                        <i class="fa-solid fa-print"></i>
+                        <span class="hidden sm:inline">DTR Generator & Print</span>
+                    </button>
+                    <button onclick="switchTab('settings')" id="tab-settings" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-1 text-slate-300 hover:text-white hover:bg-slate-800">
+                        <i class="fa-solid fa-sliders"></i>
+                        <span class="hidden sm:inline">Settings</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- ========================================== -->
+        <!-- TAB 1: DAILY TIME LOGGER                   -->
+        <!-- ========================================== -->
+        <section id="sec-logger" class="tab-content space-y-6">
+            
+            <!-- Quick Punch & Manual Add Header Card -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Quick Punch Card -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 lg:col-span-1 flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                                <i class="fa-solid fa-bolt text-amber-500"></i> Quick Punch Today
+                            </h2>
+                            <span class="text-xs font-semibold bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full" id="live-date-str">Loading date...</span>
+                        </div>
+                        
+                        <!-- Live Clock -->
+                        <div class="text-center py-4 bg-slate-900 text-white rounded-xl mb-4 shadow-inner">
+                            <div id="live-clock" class="text-3xl font-mono font-bold tracking-wider text-blue-400">00:00:00 AM</div>
+                            <div class="text-xs text-slate-400 mt-1" id="live-day">Monday</div>
+                        </div>
+
+                        <!-- Punch Buttons Grid -->
+                        <div class="grid grid-cols-2 gap-2">
+                            <button onclick="quickPunch('amIn')" class="p-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl font-semibold text-xs flex flex-col items-center gap-1 transition">
+                                <i class="fa-solid fa-sun text-emerald-600 text-base"></i>
+                                <span>AM Arrival</span>
+                                <span id="quick-amIn" class="text-[10px] text-emerald-800 font-mono font-normal">--:--</span>
+                            </button>
+                            <button onclick="quickPunch('amOut')" class="p-3 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl font-semibold text-xs flex flex-col items-center gap-1 transition">
+                                <i class="fa-solid fa-utensils text-amber-600 text-base"></i>
+                                <span>AM Departure</span>
+                                <span id="quick-amOut" class="text-[10px] text-amber-800 font-mono font-normal">--:--</span>
+                            </button>
+                            <button onclick="quickPunch('pmIn')" class="p-3 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl font-semibold text-xs flex flex-col items-center gap-1 transition">
+                                <i class="fa-solid fa-briefcase text-blue-600 text-base"></i>
+                                <span>PM Arrival</span>
+                                <span id="quick-pmIn" class="text-[10px] text-blue-800 font-mono font-normal">--:--</span>
+                            </button>
+                            <button onclick="quickPunch('pmOut')" class="p-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl font-semibold text-xs flex flex-col items-center gap-1 transition">
+                                <i class="fa-solid fa-house-user text-indigo-600 text-base"></i>
+                                <span>PM Departure</span>
+                                <span id="quick-pmOut" class="text-[10px] text-indigo-800 font-mono font-normal">--:--</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Manual Entry & Month Selector Card -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 lg:col-span-2 flex flex-col justify-between">
+                    <div>
+                        <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-4">
+                            <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                                <i class="fa-solid fa-pen-to-square text-blue-600"></i> Log or Update Specific Date
+                            </h2>
+
+                            <!-- Month Picker -->
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs text-slate-500 font-medium">Filter Month:</label>
+                                <input type="month" id="logger-month-picker" onchange="onMonthChange(this.value)" class="text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+
+                        <!-- Form Input Fields -->
+                        <form id="entry-form" onsubmit="saveManualEntry(event)" class="space-y-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 mb-1">Date</label>
+                                    <input type="date" id="input-date" required class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg p-2 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 mb-1">AM Arrival</label>
+                                    <input type="time" id="input-amIn" class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg p-2 font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 mb-1">AM Depart</label>
+                                    <input type="time" id="input-amOut" class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg p-2 font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 mb-1">PM Arrival</label>
+                                    <input type="time" id="input-pmIn" class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg p-2 font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 mb-1">PM Depart</label>
+                                    <input type="time" id="input-pmOut" class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg p-2 font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 mb-1">Undertime (Mins)</label>
+                                    <input type="number" min="0" id="input-undertime" placeholder="Auto-calculated" class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg p-2 font-mono focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 mb-1">Remarks / Status</label>
+                                    <input type="text" id="input-remarks" placeholder="Enter remark / status (optional)" class="w-full text-xs bg-slate-50 border border-slate-300 rounded-lg p-2 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none" autocomplete="off">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 mb-1">Remarks / Status Date Range</label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <input type="date" id="input-remarks-start" aria-label="Remarks start date" title="Remarks start date" class="min-w-0 w-full text-xs bg-slate-50 border border-slate-300 rounded-lg p-2 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                        <input type="date" id="input-remarks-end" aria-label="Remarks end date" title="Remarks end date" class="min-w-0 w-full text-xs bg-slate-50 border border-slate-300 rounded-lg p-2 font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                    </div>
+                                    <p class="text-[10px] text-slate-500 mt-1">Applies the remark to each date in this range.</p>
+                                </div>
+                                <div class="flex items-end gap-2">
+                                    <button type="submit" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-xs transition flex items-center justify-center gap-1">
+                                        <i class="fa-solid fa-save"></i> Save Log
+                                    </button>
+                                    <button type="button" onclick="resetForm()" class="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg text-xs transition">
+                                        Clear
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Quick Tools Bar -->
+                    <div class="mt-4 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                        <div class="text-xs text-slate-500">
+                            Standard Schedule: <span class="font-medium text-slate-700" id="lbl-std-schedule">8:00 AM - 12:00 PM / 1:00 PM - 5:00 PM</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="fillSampleData()" class="text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Fill Sample Month
+                            </button>
+                            <button onclick="clearCurrentMonthLogs()" class="text-xs bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1">
+                                <i class="fa-solid fa-trash-can"></i> Clear Month
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Entries Table Card -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-5 border-b border-slate-100 flex justify-between items-center flex-wrap gap-4">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900" id="table-month-title">Time Logs</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Summary of recorded attendance for CS Form 48 generation.</p>
+                    </div>
+                    <div class="flex items-center gap-3 text-xs">
+                        <div class="bg-slate-100 px-3 py-1.5 rounded-lg font-medium text-slate-700">
+                            Total Hours: <span id="summary-total-hours" class="font-bold text-blue-600">0 hrs</span>
+                        </div>
+                        <div class="bg-amber-50 text-amber-800 px-3 py-1.5 rounded-lg font-medium border border-amber-200">
+                            Total Undertime: <span id="summary-total-undertime" class="font-bold text-amber-700">0 mins</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-600 uppercase tracking-wider font-semibold border-b border-slate-200">
+                                <th class="p-3 text-center w-12">Day</th>
+                                <th class="p-3">Date</th>
+                                <th class="p-3 text-center">AM Arrival</th>
+                                <th class="p-3 text-center">AM Departure</th>
+                                <th class="p-3 text-center">PM Arrival</th>
+                                <th class="p-3 text-center">PM Departure</th>
+                                <th class="p-3 text-center">Undertime (Mins)</th>
+                                <th class="p-3">Remarks</th>
+                                <th class="p-3 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-tbody" class="divide-y divide-slate-100 font-mono">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 2: DTR FORM PREVIEW & PRINT            -->
+        <!-- ========================================== -->
+        <section id="sec-preview" class="tab-content hidden space-y-6">
+            
+            <!-- Dynamic Toolbar for Print & Formatting -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-4 no-print">
+                <div class="flex items-center gap-3 flex-wrap">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Month & Year:</label>
+                        <input type="month" id="preview-month-picker" onchange="onMonthChange(this.value)" class="text-xs bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 font-semibold text-slate-800">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Cutoff Period:</label>
+                        <select id="preview-cutoff" onchange="renderDTRPreview()" class="text-xs bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 font-semibold text-slate-800">
+                            <option value="1-31">Full Month (Days 1 - 31)</option>
+                            <option value="1-15">1st Cutoff (Days 1 - 15)</option>
+                            <option value="16-31">2nd Cutoff (Days 16 - 30/31)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Paper Size:</label>
+                        <select id="preview-paper-size" onchange="applyPaperSettings()" class="text-xs bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 font-bold text-blue-700">
+                            <option value="A4">A4 (210 x 297 mm)</option>
+                            <option value="Folio" selected>Folio / Long (8.5 x 13 in / 216 x 330 mm)</option>
+                            <option value="Letter">Letter (8.5 x 11 in)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Layout Format:</label>
+                        <select id="preview-copies" onchange="renderDTRPreview()" class="text-xs bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 font-semibold text-slate-800">
+                            <option value="2-up" selected>2-Up Side-by-Side (Standard Civil Service Sheet)</option>
+                            <option value="1-up">Single Copy (Centered)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="triggerPrint('A4')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2.5 rounded-xl shadow-sm text-xs transition flex items-center gap-2">
+                        <i class="fa-solid fa-file-pdf"></i> Print on A4
+                    </button>
+                    <button onclick="triggerPrint('Folio')" class="bg-blue-700 hover:bg-blue-800 text-white font-bold px-4 py-2.5 rounded-xl shadow-md text-xs transition flex items-center gap-2">
+                        <i class="fa-solid fa-print"></i> Print on Folio (8.5" x 13")
+                    </button>
+                </div>
+            </div>
+
+            <!-- Paper Sheet Workspace Container -->
+            <div class="bg-slate-300 p-4 sm:p-8 rounded-2xl overflow-x-auto flex justify-center">
+                <div id="printable-area" class="bg-white p-6 shadow-2xl border border-slate-400 paper-folio transition-all duration-200">
+                    <!-- Dynamic Dual or Single Form Render -->
+                    <div id="dtr-forms-wrapper" class="flex gap-4 justify-between items-start h-full">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ========================================== -->
+        <!-- TAB 3: USER PROFILE & SETTINGS             -->
+        <!-- ========================================== -->
+        <section id="sec-settings" class="tab-content hidden space-y-6">
+            <div class="max-w-3xl mx-auto bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200">
+                <h2 class="text-lg font-bold text-slate-900 mb-1 border-b border-slate-100 pb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-id-card text-blue-600"></i> Civil Service Form No. 48 Header Details
+                </h2>
+                
+                <form id="settings-form" onsubmit="saveSettings(event)" class="space-y-4 mt-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Employee Full Name</label>
+                            <input type="text" id="cfg-emp-name" required class="w-full text-xs border border-slate-300 rounded-lg p-2.5 font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <p class="text-[10px] text-slate-400 mt-1">Appears on "NAME" underline at the top.</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Office / Division / Agency</label>
+                            <input type="text" id="cfg-office" required class="w-full text-xs border border-slate-300 rounded-lg p-2.5 font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <p class="text-[10px] text-slate-400 mt-1">Appears on "OFFICE: ____________" at bottom.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Official Hours (Regular Days)</label>
+                            <input type="text" id="cfg-hours-regular" required class="w-full text-xs border border-slate-300 rounded-lg p-2.5 font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <p class="text-[10px] text-slate-400 mt-1">e.g., 8:00 AM - 12:00 PM / 1:00 PM - 5:00 PM</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Official Hours (Saturdays)</label>
+                            <input type="text" id="cfg-hours-sat" class="w-full text-xs border border-slate-300 rounded-lg p-2.5 font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="As required / None">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">In-Charge / Immediate Supervisor Name</label>
+                        <input type="text" id="cfg-incharge" required class="w-full text-xs border border-slate-300 rounded-lg p-2.5 font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        <p class="text-[10px] text-slate-400 mt-1">Appears above "In-Charge" signature line.</p>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 flex justify-between items-center">
+                        <button type="button" onclick="factoryReset()" class="text-xs text-red-600 hover:text-red-800 font-semibold flex items-center gap-1">
+                            <i class="fa-solid fa-arrows-rotate"></i> Reset All Data
+                        </button>
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-6 py-2.5 rounded-lg shadow transition">
+                            Save Settings
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Dynamic Print Style Tag Injector -->
+    <style id="dynamic-print-style"></style>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        // Default Configuration
+        const DEFAULT_CONFIG = {
+            empName: 'JUAN DELA CRUZ',
+            office: 'Department of Health',
+            inCharge: 'KEVIN A JAVIER, MD, MPH, MBA, FRSPH',
+            hoursRegular: '8:00 AM - 12:00 PM / 1:00 PM - 5:00 PM',
+            hoursSat: 'As required'
+        };
+
+        // State variables
+        let appConfig = JSON.parse(localStorage.getItem('cs48_config')) || DEFAULT_CONFIG;
+        // Migrate the previous default office name while preserving any custom office setting.
+        if (appConfig.office === 'DEPARTMENT OF EDUCATION') {
+            appConfig.office = DEFAULT_CONFIG.office;
+        }
+        // Migrate the previous default supervisor name while preserving any custom name.
+        if (appConfig.inCharge === 'Kevin A. Javier, MD') {
+            appConfig.inCharge = DEFAULT_CONFIG.inCharge;
+        }
+        localStorage.setItem('cs48_config', JSON.stringify(appConfig));
+        let dtrEntries = JSON.parse(localStorage.getItem('cs48_entries')) || {};
+        let currentYearMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+
+        // Initialize on Load
+        window.addEventListener('DOMContentLoaded', () => {
+            initApp();
+            startLiveClock();
+            applyPaperSettings();
+        });
+
+        function initApp() {
+            // Set default month pickers
+            document.getElementById('logger-month-picker').value = currentYearMonth;
+            document.getElementById('preview-month-picker').value = currentYearMonth;
+            document.getElementById('input-date').value = new Date().toISOString().slice(0, 10);
+
+            // Load Settings in UI
+            loadSettingsForm();
+            updateHeaderInfo();
+
+            // Render views
+            renderLogsTable();
+            renderDTRPreview();
+            updateQuickPunchDisplay();
+        }
+
+        // Live Clock logic
+        function startLiveClock() {
+            const updateClock = () => {
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const dayStr = now.toLocaleDateString('en-US', { weekday: 'long' });
+
+                document.getElementById('live-clock').innerText = timeStr;
+                document.getElementById('live-date-str').innerText = dateStr;
+                document.getElementById('live-day').innerText = dayStr;
+            };
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
+
+        // Tab Switcher
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-tab').forEach(el => {
+                el.classList.remove('bg-blue-600', 'text-white');
+                el.classList.add('text-slate-300', 'hover:text-white', 'hover:bg-slate-800');
+            });
+
+            document.getElementById(`sec-${tabId}`).classList.remove('hidden');
+            const activeTabBtn = document.getElementById(`tab-${tabId}`);
+            activeTabBtn.classList.add('bg-blue-600', 'text-white');
+            activeTabBtn.classList.remove('text-slate-300', 'hover:text-white', 'hover:bg-slate-800');
+
+            if (tabId === 'preview') {
+                renderDTRPreview();
+            }
+        }
+
+        // Handle Month Change
+        function onMonthChange(val) {
+            if (!val) return;
+            currentYearMonth = val;
+            document.getElementById('logger-month-picker').value = val;
+            document.getElementById('preview-month-picker').value = val;
+            
+            updateHeaderInfo();
+            renderLogsTable();
+            renderDTRPreview();
+        }
+
+        function updateHeaderInfo() {
+            const [y, m] = currentYearMonth.split('-');
+            const dateObj = new Date(parseInt(y), parseInt(m) - 1, 1);
+            const monthName = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            
+            document.getElementById('table-month-title').innerText = `Time Logs for ${monthName}`;
+            document.getElementById('lbl-std-schedule').innerText = appConfig.hoursRegular;
+        }
+
+        // Auto calculate Undertime in Minutes (Standard: 8-12, 1-5 = 8 hours)
+        function calculateUndertime(amIn, amOut, pmIn, pmOut) {
+            if (!amIn && !amOut && !pmIn && !pmOut) return 0;
+
+            let totalUndertimeMins = 0;
+
+            // AM Session (Target 8:00 AM to 12:00 PM)
+            if (amIn) {
+                const [h, m] = amIn.split(':').map(Number);
+                const amInMins = h * 60 + m;
+                const stdAmInMins = 8 * 60; // 8:00 AM
+                if (amInMins > stdAmInMins) totalUndertimeMins += (amInMins - stdAmInMins);
+            }
+
+            if (amOut) {
+                const [h, m] = amOut.split(':').map(Number);
+                const amOutMins = h * 60 + m;
+                const stdAmOutMins = 12 * 60; // 12:00 PM
+                if (amOutMins < stdAmOutMins) totalUndertimeMins += (stdAmOutMins - amOutMins);
+            }
+
+            // PM Session (Target 1:00 PM to 5:00 PM)
+            if (pmIn) {
+                const [h, m] = pmIn.split(':').map(Number);
+                const pmInMins = h * 60 + m;
+                const stdPmInMins = 13 * 60; // 1:00 PM
+                if (pmInMins > stdPmInMins) totalUndertimeMins += (pmInMins - stdPmInMins);
+            }
+
+            if (pmOut) {
+                const [h, m] = pmOut.split(':').map(Number);
+                const pmOutMins = h * 60 + m;
+                const stdPmOutMins = 17 * 60; // 5:00 PM
+                if (pmOutMins < stdPmOutMins) totalUndertimeMins += (stdPmOutMins - pmOutMins);
+            }
+
+            return totalUndertimeMins;
+        }
+
+        // Save Manual Log Entry
+        function saveManualEntry(e) {
+            e.preventDefault();
+            const dateVal = document.getElementById('input-date').value;
+            if (!dateVal) return;
+
+            const existingEntry = dtrEntries[dateVal];
+            const remarksPreview = document.getElementById('input-remarks').value.trim();
+            const remarksStart = document.getElementById('input-remarks-start').value || dateVal;
+            const remarksEnd = document.getElementById('input-remarks-end').value || remarksStart;
+            if (remarksPreview && remarksStart > remarksEnd) {
+                alert('The remarks start date must be on or before the end date.');
+                return;
+            }
+            const rangePreview = remarksPreview ? `\nRemarks / Status: ${remarksPreview}\nRemarks Date Range: ${remarksStart} to ${remarksEnd}` : '';
+            const confirmMessage = `Confirm Save Log\n\nDate: ${dateVal}\nAM Arrival: ${document.getElementById('input-amIn').value || '--'}\nAM Departure: ${document.getElementById('input-amOut').value || '--'}\nPM Arrival: ${document.getElementById('input-pmIn').value || '--'}\nPM Departure: ${document.getElementById('input-pmOut').value || '--'}${rangePreview}${existingEntry ? '\n\nA log already exists for this date. Saving will update/replace it.' : ''}\n\nDo you want to save this log?`;
+            if (!confirm(confirmMessage)) return;
+
+            const amIn = document.getElementById('input-amIn').value;
+            const amOut = document.getElementById('input-amOut').value;
+            const pmIn = document.getElementById('input-pmIn').value;
+            const pmOut = document.getElementById('input-pmOut').value;
+            let undertime = document.getElementById('input-undertime').value;
+            const remarks = document.getElementById('input-remarks').value;
+
+            if (undertime === '' || undertime === null) {
+                undertime = calculateUndertime(amIn, amOut, pmIn, pmOut);
+            } else {
+                undertime = parseInt(undertime) || 0;
+            }
+
+            dtrEntries[dateVal] = {
+                ...(existingEntry || {}),
+                amIn, amOut, pmIn, pmOut,
+                undertime: parseInt(undertime),
+                remarks: (remarks.trim() && dateVal >= (document.getElementById('input-remarks-start').value || dateVal) && dateVal <= (document.getElementById('input-remarks-end').value || document.getElementById('input-remarks-start').value || dateVal)) ? remarks : (existingEntry?.remarks || '')
+            };
+
+            // Apply the free-text remark/status to every date in the selected range.
+            if (remarks.trim()) {
+                const rangeStart = document.getElementById('input-remarks-start').value || dateVal;
+                const rangeEnd = document.getElementById('input-remarks-end').value || rangeStart;
+                const cursor = new Date(`${rangeStart}T12:00:00`);
+                const lastDate = new Date(`${rangeEnd}T12:00:00`);
+                while (cursor <= lastDate) {
+                    const rangeDate = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`;
+                    const previous = dtrEntries[rangeDate] || {};
+                    dtrEntries[rangeDate] = { ...previous, remarks };
+                    cursor.setDate(cursor.getDate() + 1);
+                }
+            }
+
+            saveStorage();
+            
+            const entryYM = dateVal.slice(0, 7);
+            if (entryYM !== currentYearMonth) {
+                onMonthChange(entryYM);
+            } else {
+                renderLogsTable();
+                renderDTRPreview();
+            }
+
+            updateQuickPunchDisplay();
+        }
+
+        // Quick Punch for Today — ask for confirmation before saving
+        function quickPunch(type) {
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            const punchLabels = {
+                amIn: 'AM Arrival',
+                amOut: 'AM Departure',
+                pmIn: 'PM Arrival',
+                pmOut: 'PM Departure'
+            };
+            const displayTime = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            const existingEntry = dtrEntries[todayStr] || {};
+            const previousTime = existingEntry[type] ? formatTime12(existingEntry[type]) : '';
+
+            let promptMessage = `Confirm time punch\n\nAction: ${punchLabels[type] || type}\nDate: ${todayStr}\nTime: ${displayTime}`;
+            if (previousTime) {
+                promptMessage += `\n\nExisting recorded time: ${previousTime}\nConfirming will replace it.`;
+            }
+            if (!confirm(promptMessage)) return;
+
+            if (!dtrEntries[todayStr]) {
+                dtrEntries[todayStr] = { amIn: '', amOut: '', pmIn: '', pmOut: '', undertime: 0, remarks: '' };
+            }
+
+            dtrEntries[todayStr][type] = timeStr;
+            dtrEntries[todayStr].undertime = calculateUndertime(
+                dtrEntries[todayStr].amIn,
+                dtrEntries[todayStr].amOut,
+                dtrEntries[todayStr].pmIn,
+                dtrEntries[todayStr].pmOut
+            );
+
+            saveStorage();
+
+            const todayYM = todayStr.slice(0, 7);
+            if (todayYM === currentYearMonth) {
+                renderLogsTable();
+                renderDTRPreview();
+            }
+            updateQuickPunchDisplay();
+        }
+
+        function updateQuickPunchDisplay() {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const entry = dtrEntries[todayStr] || {};
+
+            document.getElementById('quick-amIn').innerText = formatTime12(entry.amIn) || '--:--';
+            document.getElementById('quick-amOut').innerText = formatTime12(entry.amOut) || '--:--';
+            document.getElementById('quick-pmIn').innerText = formatTime12(entry.pmIn) || '--:--';
+            document.getElementById('quick-pmOut').innerText = formatTime12(entry.pmOut) || '--:--';
+        }
+
+        function editEntry(dateStr) {
+            const entry = dtrEntries[dateStr] || {};
+            document.getElementById('input-date').value = dateStr;
+            document.getElementById('input-amIn').value = entry.amIn || '';
+            document.getElementById('input-amOut').value = entry.amOut || '';
+            document.getElementById('input-pmIn').value = entry.pmIn || '';
+            document.getElementById('input-pmOut').value = entry.pmOut || '';
+            document.getElementById('input-undertime').value = entry.undertime !== undefined ? entry.undertime : '';
+            document.getElementById('input-remarks').value = entry.remarks || '';
+            document.getElementById('input-remarks-start').value = dateStr;
+            document.getElementById('input-remarks-end').value = dateStr;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function deleteEntry(dateStr) {
+            if (confirm(`Are you sure you want to delete log for ${dateStr}?`)) {
+                delete dtrEntries[dateStr];
+                saveStorage();
+                renderLogsTable();
+                renderDTRPreview();
+                updateQuickPunchDisplay();
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('entry-form').reset();
+            document.getElementById('input-date').value = new Date().toISOString().slice(0, 10);
+            document.getElementById('input-remarks-start').value = document.getElementById('input-date').value;
+            document.getElementById('input-remarks-end').value = document.getElementById('input-date').value;
+        }
+
+        // Render Logs Table
+        function renderLogsTable() {
+            const tbody = document.getElementById('logs-tbody');
+            tbody.innerHTML = '';
+
+            const [year, month] = currentYearMonth.split('-').map(Number);
+            const daysInMonth = new Date(year, month, 0).getDate();
+
+            let grandTotalUndertime = 0;
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayFormatted = String(day).padStart(2, '0');
+                const dateStr = `${currentYearMonth}-${dayFormatted}`;
+                const dateObj = new Date(year, month - 1, day);
+                const dayOfWeek = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+                const isWeekend = (dateObj.getDay() === 0 || dateObj.getDay() === 6);
+
+                const entry = dtrEntries[dateStr] || {};
+
+                let remarkText = entry.remarks || '';
+                if (!remarkText && dateObj.getDay() === 6) remarkText = 'Saturday';
+                if (!remarkText && dateObj.getDay() === 0) remarkText = 'Sunday';
+
+                const undertime = entry.undertime || 0;
+                grandTotalUndertime += undertime;
+
+                const tr = document.createElement('tr');
+                tr.className = isWeekend ? 'bg-slate-50/70 hover:bg-slate-100' : 'hover:bg-blue-50/50';
+
+                tr.innerHTML = `
+                    <td class="p-3 text-center font-bold text-slate-700">${day}</td>
+                    <td class="p-3 font-medium text-slate-600">${dateStr} (${dayOfWeek})</td>
+                    <td class="p-3 text-center font-semibold text-emerald-700">${formatTime12(entry.amIn)}</td>
+                    <td class="p-3 text-center font-semibold text-amber-700">${formatTime12(entry.amOut)}</td>
+                    <td class="p-3 text-center font-semibold text-blue-700">${formatTime12(entry.pmIn)}</td>
+                    <td class="p-3 text-center font-semibold text-indigo-700">${formatTime12(entry.pmOut)}</td>
+                    <td class="p-3 text-center font-semibold ${undertime > 0 ? 'text-amber-600' : 'text-slate-400'}">${undertime > 0 ? undertime : '-'}</td>
+                    <td class="p-3 text-slate-500 font-sans italic">${remarkText}</td>
+                    <td class="p-3 text-right space-x-1 no-print">
+                        <button onclick="editEntry('${dateStr}')" class="text-blue-600 hover:text-blue-800 px-2 py-1 bg-blue-50 rounded"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteEntry('${dateStr}')" class="text-red-600 hover:text-red-800 px-2 py-1 bg-red-50 rounded"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            }
+
+            document.getElementById('summary-total-undertime').innerText = `${grandTotalUndertime} mins`;
+            
+            let totalWorkedMins = 0;
+            Object.keys(dtrEntries).forEach(d => {
+                if (d.startsWith(currentYearMonth)) {
+                    const e = dtrEntries[d];
+                    if (e.amIn && e.amOut) totalWorkedMins += getTimeDiffMins(e.amIn, e.amOut);
+                    if (e.pmIn && e.pmOut) totalWorkedMins += getTimeDiffMins(e.pmIn, e.pmOut);
+                }
+            });
+            const hours = Math.floor(totalWorkedMins / 60);
+            const mins = totalWorkedMins % 60;
+            document.getElementById('summary-total-hours').innerText = `${hours}h ${mins}m`;
+        }
+
+        // Apply dynamic paper size classes
+        function applyPaperSettings() {
+            const paperSelect = document.getElementById('preview-paper-size').value;
+            const paperArea = document.getElementById('printable-area');
+
+            paperArea.classList.remove('paper-a4', 'paper-folio', 'paper-letter');
+
+            if (paperSelect === 'A4') {
+                paperArea.classList.add('paper-a4');
+            } else if (paperSelect === 'Folio') {
+                paperArea.classList.add('paper-folio');
+            } else {
+                paperArea.classList.add('paper-letter');
+            }
+        }
+
+        // Trigger Direct Print with exact paper size rules
+        function triggerPrint(paperType) {
+            if (paperType) {
+                document.getElementById('preview-paper-size').value = paperType;
+                applyPaperSettings();
+            }
+
+            const paperSize = document.getElementById('preview-paper-size').value;
+            const dynamicStyle = document.getElementById('dynamic-print-style');
+
+            let pageRule = '@page { size: portrait; margin: 4mm; }';
+            if (paperSize === 'A4') {
+                pageRule = '@page { size: A4 portrait; margin: 4mm; }';
+            } else if (paperSize === 'Folio') {
+                pageRule = '@page { size: 8.5in 13in portrait; margin: 4mm; }';
+            } else if (paperSize === 'Letter') {
+                pageRule = '@page { size: letter portrait; margin: 4mm; }';
+            }
+
+            dynamicStyle.innerHTML = pageRule;
+            window.print();
+        }
+
+        // =========================================================================
+        // DTR PREVIEW & CS FORM NO. 48 EXACT HTML GENERATOR
+        // =========================================================================
+        function renderDTRPreview() {
+            const wrapper = document.getElementById('dtr-forms-wrapper');
+            wrapper.innerHTML = '';
+
+            const copiesMode = document.getElementById('preview-copies').value;
+            const count = (copiesMode === '2-up') ? 2 : 1;
+
+            for (let i = 0; i < count; i++) {
+                const formHtml = generateSingleCSForm48HTML();
+                const container = document.createElement('div');
+                container.className = "w-1/2 cs-form-box text-black";
+                if (count === 1) container.className = "w-3/4 mx-auto cs-form-box text-black";
+                
+                container.innerHTML = formHtml;
+                wrapper.appendChild(container);
+            }
+        }
+
+        function generateSingleCSForm48HTML() {
+            const [year, month] = currentYearMonth.split('-').map(Number);
+            const dateObj = new Date(year, month - 1, 1);
+            const monthNameStr = dateObj.toLocaleDateString('en-US', { month: 'long' });
+
+            const cutoff = document.getElementById('preview-cutoff').value;
+            const daysInMonth = new Date(year, month, 0).getDate();
+
+            let startDay = 1;
+            let endDay = daysInMonth;
+
+            if (cutoff === '1-15') {
+                endDay = 15;
+            } else if (cutoff === '16-31') {
+                startDay = 16;
+            }
+
+            let rowsHtml = '';
+            let totalUndertimeHours = 0;
+            let totalUndertimeMinutes = 0;
+
+            for (let day = 1; day <= 31; day++) {
+                const dayFormatted = String(day).padStart(2, '0');
+                const dateStr = `${currentYearMonth}-${dayFormatted}`;
+                const entry = dtrEntries[dateStr] || {};
+                const curDateObj = new Date(year, month - 1, day);
+
+                const isOutsideCutoff = (day < startDay || day > endDay || day > daysInMonth);
+
+                let amIn = '';
+                let amOut = '';
+                let pmIn = '';
+                let pmOut = '';
+                let undertimeHrsStr = '';
+                let undertimeMinsStr = '';
+
+                if (!isOutsideCutoff) {
+                    amIn = formatTime12(entry.amIn);
+                    amOut = formatTime12(entry.amOut);
+                    pmIn = formatTime12(entry.pmIn);
+                    pmOut = formatTime12(entry.pmOut);
+
+                    if (!entry.amIn && !entry.amOut && !entry.pmIn && !entry.pmOut) {
+                        if (entry.remarks) {
+                            amIn = entry.remarks;
+                        } else if (curDateObj.getDay() === 6) {
+                            amIn = 'Saturday';
+                        } else if (curDateObj.getDay() === 0) {
+                            amIn = 'Sunday';
+                        }
+                    }
+
+                    const undertime = entry.undertime || 0;
+                    if (undertime > 0) {
+                        const h = Math.floor(undertime / 60);
+                        const m = undertime % 60;
+                        undertimeHrsStr = h > 0 ? h : '';
+                        undertimeMinsStr = m > 0 ? m : '';
+
+                        totalUndertimeHours += h;
+                        totalUndertimeMinutes += m;
+                    }
+                }
+
+                const hasNoTimeLogs = !entry.amIn && !entry.amOut && !entry.pmIn && !entry.pmOut;
+                rowsHtml += `
+                    <tr>
+                        <td style="font-weight:bold;">${day}</td>
+                        <td colspan="${amIn && !amOut && !pmIn && !pmOut ? '4' : '1'}">${amIn}</td>
+                        ${amIn && !amOut && !pmIn && !pmOut ? '' : `
+                            <td>${amOut}</td>
+                            <td>${pmIn}</td>
+                            <td>${pmOut}</td>
+                        `}
+                        <td>${undertimeHrsStr}</td>
+                        <td>${undertimeMinsStr}</td>
+                    </tr>
+                    ${!isOutsideCutoff && entry.remarks && !hasNoTimeLogs ? `
+                    <tr>
+                        <td></td>
+                        <td colspan="4" style="font-size:8px;font-style:italic;text-align:left;padding-left:4px;">Remark: ${entry.remarks}</td>
+                        <td></td><td></td>
+                    </tr>` : ''}
+                `;
+            }
+
+            totalUndertimeHours += Math.floor(totalUndertimeMinutes / 60);
+            totalUndertimeMinutes = totalUndertimeMinutes % 60;
+
+            const cutoffDisplayStr = cutoff === '1-15' ? '1-15' : cutoff === '16-31' ? `16-${daysInMonth}` : `1-${daysInMonth}`;
+
+            return `
+                <div class="text-[9px] uppercase tracking-tighter italic">Civil Service Form No. 48</div>
+                <div class="text-center font-bold text-sm tracking-wide mt-0.5">DAILY TIME RECORD</div>
+                <div class="text-center text-[11px] font-bold mt-1 border-b border-black uppercase pb-0.5">${appConfig.empName}</div>
+                <div class="text-[8px] text-center italic mb-1">(Name)</div>
+
+                <div class="flex justify-between items-end text-[9.5px] mb-1">
+                    <div>For the month of:</div>
+                    <div class="font-bold border-b border-black px-2 flex-grow text-center">${monthNameStr} ${year} (${cutoffDisplayStr})</div>
+                </div>
+
+                <div class="text-[8.5px] mb-1.5 leading-tight">
+                    <div class="flex justify-between">
+                        <span>Official Hours for arrival and departure</span>
+                        <span>Regular days: <u class="font-bold">${appConfig.hoursRegular}</u></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span></span>
+                        <span>Saturdays: <u class="font-bold">${appConfig.hoursSat || 'None'}</u></span>
+                    </div>
+                </div>
+
+                <!-- Exact Replica CS Form 48 Table -->
+                <table class="w-full dtr-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" style="width: 8%;">DATE</th>
+                            <th colspan="2" style="width: 36%;">A.M.</th>
+                            <th colspan="2" style="width: 36%;">P.M.</th>
+                            <th colspan="2" style="width: 20%;">UNDERTIME</th>
+                        </tr>
+                        <tr>
+                            <th style="width: 18%;">Arrival</th>
+                            <th style="width: 18%;">Depart</th>
+                            <th style="width: 18%;">Arrival</th>
+                            <th style="width: 18%;">Depart</th>
+                            <th style="width: 10%;">Hours</th>
+                            <th style="width: 10%;">Mins</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml}
+                        <tr style="font-weight: bold; background-color: #f8fafc;">
+                            <td colspan="5" style="text-align: right; padding-right: 5px;">TOTAL</td>
+                            <td>${totalUndertimeHours || ''}</td>
+                            <td>${totalUndertimeMinutes || ''}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p class="text-[8.5px] italic text-justify mt-1.5 leading-tight">
+                    I CERTIFY on my honor that the above is a true and correct report of the hours of work performed, record of which was made daily at the time of arrival and departure from office.
+                </p>
+
+                <div class="mt-6 border-b border-black text-center font-bold text-[10px]">
+                    <!-- Employee Signature -->
+                </div>
+                <div class="text-center text-[8px] italic mb-3">(Signature of Employee)</div>
+
+                <p class="text-[8.5px] italic mb-4">
+                    VERIFIED as to the prescribed office hours:
+                </p>
+
+                <div class="border-b border-black text-center font-bold text-[9.5px] uppercase">
+                    ${appConfig.inCharge}
+                </div>
+                <div class="text-center text-[8px] italic mb-2">In-Charge</div>
+
+                <div class="text-[8.5px] flex items-center">
+                    <span class="font-bold">OFFICE:</span>
+                    <span class="border-b border-black flex-grow ml-1 text-center font-semibold">${appConfig.office}</span>
+                </div>
+            `;
+        }
+
+        // Settings Manager
+        function loadSettingsForm() {
+            document.getElementById('cfg-emp-name').value = appConfig.empName;
+            document.getElementById('cfg-office').value = appConfig.office;
+            document.getElementById('cfg-incharge').value = appConfig.inCharge;
+            document.getElementById('cfg-hours-regular').value = appConfig.hoursRegular;
+            document.getElementById('cfg-hours-sat').value = appConfig.hoursSat;
+        }
+
+        function saveSettings(e) {
+            e.preventDefault();
+            appConfig.empName = document.getElementById('cfg-emp-name').value;
+            appConfig.office = document.getElementById('cfg-office').value;
+            appConfig.inCharge = document.getElementById('cfg-incharge').value;
+            appConfig.hoursRegular = document.getElementById('cfg-hours-regular').value;
+            appConfig.hoursSat = document.getElementById('cfg-hours-sat').value;
+
+            localStorage.setItem('cs48_config', JSON.stringify(appConfig));
+            updateHeaderInfo();
+            renderDTRPreview();
+
+            alert('Settings updated successfully!');
+        }
+
+        function factoryReset() {
+            if (confirm('Are you sure you want to reset all entries and settings to default?')) {
+                localStorage.removeItem('cs48_config');
+                localStorage.removeItem('cs48_entries');
+                appConfig = DEFAULT_CONFIG;
+                dtrEntries = {};
+                initApp();
+            }
+        }
+
+        // Fill Sample Data Generator
+        function fillSampleData() {
+            const [year, month] = currentYearMonth.split('-').map(Number);
+            const daysInMonth = new Date(year, month, 0).getDate();
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dayFormatted = String(d).padStart(2, '0');
+                const dateStr = `${currentYearMonth}-${dayFormatted}`;
+                const dateObj = new Date(year, month - 1, d);
+                const dayOfWeek = dateObj.getDay();
+
+                if (dayOfWeek === 0) {
+                    dtrEntries[dateStr] = { amIn: '', amOut: '', pmIn: '', pmOut: '', undertime: 0, remarks: 'Sunday' };
+                } else if (dayOfWeek === 6) {
+                    dtrEntries[dateStr] = { amIn: '', amOut: '', pmIn: '', pmOut: '', undertime: 0, remarks: 'Saturday' };
+                } else {
+                    let amIn = "07:58";
+                    let amOut = "12:00";
+                    let pmIn = "12:56";
+                    let pmOut = "17:00";
+                    let undertime = 0;
+
+                    if (d === 5) {
+                        amIn = "08:14";
+                        undertime = 14;
+                    } else if (d === 18) {
+                        pmOut = "16:40";
+                        undertime = 20;
+                    }
+
+                    dtrEntries[dateStr] = { amIn, amOut, pmIn, pmOut, undertime, remarks: '' };
+                }
+            }
+
+            saveStorage();
+            renderLogsTable();
+            renderDTRPreview();
+        }
+
+        function clearCurrentMonthLogs() {
+            if (confirm(`Clear all logs for month ${currentYearMonth}?`)) {
+                Object.keys(dtrEntries).forEach(key => {
+                    if (key.startsWith(currentYearMonth)) {
+                        delete dtrEntries[key];
+                    }
+                });
+                saveStorage();
+                renderLogsTable();
+                renderDTRPreview();
+            }
+        }
+
+        // Helpers
+        function formatTime12(time24) {
+            if (!time24) return '';
+            const [h, m] = time24.split(':').map(Number);
+            const period = h >= 12 ? 'PM' : 'AM';
+            const h12 = h % 12 || 12;
+            return `${h12}:${String(m).padStart(2, '0')}`;
+        }
+
+        function getTimeDiffMins(start, end) {
+            const [sh, sm] = start.split(':').map(Number);
+            const [eh, em] = end.split(':').map(Number);
+            return (eh * 60 + em) - (sh * 60 + sm);
+        }
+
+        function saveStorage() {
+            localStorage.setItem('cs48_entries', JSON.stringify(dtrEntries));
+        }
+    </script>
+</body>
+</html>
